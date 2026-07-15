@@ -1,7 +1,18 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-surface-900: #0a0a0a;
+  --color-surface-800: #171717;
+  --color-surface-700: #262626;
+  --color-surface-600: #404040;
+  --color-surface-500: #737373;
+  --color-surface-400: #a3a3a3;
+  --color-accent: #dc2626;
+  --font-family-sans: "Inter Tight", sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+}
 
 body {
-  @apply bg-[#0a0a0a] text-white selection:bg-accent selection:text-white;
+  background: #0a0a0a;
+  color: white;
 }
