@@ -34,18 +34,34 @@ export default function Home({ data, stats }: { data: any[], stats: any }) {
   const pie = useRef<any>(null);
   const line = useRef<any>(null);
 
-  const total = data.length;
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'nama' | 'tahun' | 'kerugian'>('nama');
+
+  const filtered = data
+    .filter((x: any) => {
+      if (statusFilter !== 'all' && x.status !== statusFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return x.nama.toLowerCase().includes(q) || (x.instansi || '').toLowerCase().includes(q);
+      }
+      return true;
+    })
+    .sort((a: any, b: any) => {
+      if (sortBy === 'nama') return a.nama.localeCompare(b.nama);
+      if (sortBy === 'kerugian') return (b.total_kerugian || 0) - (a.total_kerugian || 0);
+      return (b.tahun || 0) - (a.tahun || 0);
+    });
 
   useEffect(() => {
     if (!stats) return;
-
     if (inst.current) inst.current.destroy();
     if (stats.instansi_top.length > 0) {
       inst.current = new ApexCharts(chartBar.current, {
         chart: { type: 'bar', height: 250, background: 'transparent', foreColor: '#8a8f98', toolbar: { show: false } },
         series: [{ name: 'Tersangka', data: stats.instansi_top.map((d: any) => d.jumlah) }],
-        xaxis: { categories: stats.instansi_top.map((d: any) => d.instansi), labels: { style: { colors: '#8a8f98', fontSize: '10px' } } },
-        yaxis: { labels: { style: { colors: '#8a8f98', fontSize: '10px' } } },
+        xaxis: { categories: stats.instansi_top.map((d: any) => d.instansi), labels: { style: { colors: '#8a8f98', fontSize: '11px' } } },
+        yaxis: { labels: { style: { colors: '#8a8f98', fontSize: '11px' } } },
         grid: { borderColor: 'rgba(255,255,255,0.05)' },
         colors: ['#dc2626'],
         plotOptions: { bar: { borderRadius: 3, columnWidth: '70%' } },
@@ -54,134 +70,179 @@ export default function Home({ data, stats }: { data: any[], stats: any }) {
       });
       inst.current.render();
     }
-
     if (pie.current) pie.current.destroy();
     const statusObj = stats.status_distribusi || {};
     if (Object.keys(statusObj).length > 0) {
       pie.current = new ApexCharts(chartPie.current, {
         chart: { type: 'donut', height: 250, background: 'transparent', foreColor: '#8a8f98', toolbar: { show: false } },
-        series: Object.values(statusObj),
-        labels: Object.keys(statusObj),
+        series: Object.values(statusObj), labels: Object.keys(statusObj),
         colors: ['#dc2626', '#f59e0b', '#6366f1', '#10b981'],
         legend: { position: 'bottom', labels: { colors: '#8a8f98' } },
-        dataLabels: { enabled: false },
-        tooltip: { theme: 'dark' },
+        dataLabels: { enabled: false }, tooltip: { theme: 'dark' },
         plotOptions: { pie: { donut: { size: '65%' } } },
       });
       pie.current.render();
     }
-
     if (line.current) line.current.destroy();
     if (stats.tren_tahunan.length > 0) {
       line.current = new ApexCharts(chartLine.current, {
         chart: { type: 'line', height: 250, background: 'transparent', foreColor: '#8a8f98', toolbar: { show: false } },
         series: [{ name: 'Kasus', data: stats.tren_tahunan.map((d: any) => d.jumlah) }],
-        xaxis: { categories: stats.tren_tahunan.map((d: any) => d.tahun), labels: { style: { colors: '#8a8f98', fontSize: '10px' } } },
-        yaxis: { labels: { style: { colors: '#8a8f98', fontSize: '10px' } } },
+        xaxis: { categories: stats.tren_tahunan.map((d: any) => d.tahun), labels: { style: { colors: '#8a8f98', fontSize: '11px' } } },
+        yaxis: { labels: { style: { colors: '#8a8f98', fontSize: '11px' } } },
         grid: { borderColor: 'rgba(255,255,255,0.05)' },
-        colors: ['#dc2626'],
-        stroke: { curve: 'smooth', width: 2 },
+        colors: ['#dc2626'], stroke: { curve: 'smooth', width: 2 },
         markers: { size: 3, colors: ['#dc2626'] },
-        tooltip: { theme: 'dark' },
-        dataLabels: { enabled: false },
+        tooltip: { theme: 'dark' }, dataLabels: { enabled: false },
       });
       line.current.render();
     }
-
-    return () => {
-      if (inst.current) inst.current.destroy();
-      if (pie.current) pie.current.destroy();
-      if (line.current) line.current.destroy();
-    };
+    return () => { inst.current?.destroy(); pie.current?.destroy(); line.current?.destroy(); };
   }, [stats]);
 
   const topRugi = stats?.top_kerugian?.filter((t: any) => t.total_kerugian > 0) || [];
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
-      <header style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '24px', marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 510, letterSpacing: '-0.704px', color: '#f7f8f8', lineHeight: 1.13 }}>
-          Koruptor Watchlist
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
+      {/* HEADER */}
+      <header style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '20px', marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.5px', color: '#f7f8f8', lineHeight: 1.2 }}>
+          🕵️ Koruptor Watchlist
         </h1>
-        <p style={{ color: '#8a8f98', fontSize: '13px', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>
-          {total} tersangka · data dari KPK, BBC, Tempo, Antara, CNN, Kompas
+        <p style={{ color: '#a0a4ab', fontSize: '14px', marginTop: '4px', lineHeight: 1.5 }}>
+          Dashboard data kasus korupsi Indonesia dari vonis inkrah — sumber: KPK, BBC, Tempo, CNN, Kompas, Antara
         </p>
       </header>
 
+      {/* BIG NUMBERS */}
       {stats && (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '40px' }}>
-            {[
-              { label: 'Total Tersangka', value: stats.total_tersangka },
-              { label: 'Total Kasus', value: stats.total_kasus },
-              { label: 'Kerugian Negara', value: formatRupiah(stats.total_kerugian) },
-              { label: 'Periode Data', value: '2013–2025' },
-            ].map(stat => (
-              <motion.div key={stat.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '20px' }}>
-                <p style={{ color: '#8a8f98', fontSize: '11px', fontWeight: 510 }}>{stat.label}</p>
-                <p style={{ color: '#f7f8f8', fontSize: '28px', fontWeight: 510, marginTop: '4px' }}>{stat.value}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '40px' }}>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '20px' }}>
-              <p style={{ color: '#f7f8f8', fontSize: '13px', fontWeight: 590, marginBottom: '12px' }}>Sektor Terbanyak</p>
-              <div ref={chartBar} style={{ minHeight: '250px' }} />
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '20px' }}>
-              <p style={{ color: '#f7f8f8', fontSize: '13px', fontWeight: 590, marginBottom: '12px' }}>Status Hukum</p>
-              <div ref={chartPie} style={{ minHeight: '250px' }} />
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '20px' }}>
-              <p style={{ color: '#f7f8f8', fontSize: '13px', fontWeight: 590, marginBottom: '12px' }}>Tren Tahunan</p>
-              <div ref={chartLine} style={{ minHeight: '250px' }} />
-            </motion.div>
-          </div>
-
-          {topRugi.length > 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '20px', marginBottom: '40px' }}>
-              <p style={{ color: '#f7f8f8', fontSize: '13px', fontWeight: 590, marginBottom: '12px' }}>Kerugian Negara Terbesar</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {topRugi.map((t: any, i: number) => (
-                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div>
-                      <span style={{ color: '#8a8f98', fontSize: '11px', marginRight: '8px', fontFamily: 'JetBrains Mono, monospace' }}>#{i + 1}</span>
-                      <span style={{ color: '#f7f8f8', fontSize: '13px' }}>{t.nama}</span>
-                    </div>
-                    <span style={{ color: '#dc2626', fontSize: '13px', fontWeight: 510, fontFamily: 'JetBrains Mono, monospace' }}>{formatRupiah(t.total_kerugian)}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '28px' }}>
+          {[
+            { label: 'Tersangka', value: stats.total_tersangka, desc: 'orang yang terlibat' },
+            { label: 'Total Kasus', value: stats.total_kasus, desc: 'perkara korupsi' },
+            { label: 'Kerugian Negara', value: formatRupiah(stats.total_kerugian), desc: 'total uang negara' },
+            { label: 'Periode', value: '2013–2025', desc: 'tahun vonis' },
+          ].map(stat => (
+            <div key={stat.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '16px' }}>
+              <p style={{ color: '#8a8f98', fontSize: '11px', fontWeight: 500, marginBottom: '2px' }}>{stat.label}</p>
+              <p style={{ color: '#f7f8f8', fontSize: '26px', fontWeight: 600, lineHeight: 1.1 }}>{stat.value}</p>
+              <p style={{ color: '#62666d', fontSize: '11px', marginTop: '2px' }}>{stat.desc}</p>
+            </div>
+          ))}
+        </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '12px' }}>
-        {data.map((item: any) => (
-          <KoruptorCard
-            key={item.id}
-            nama={item.nama}
-            status={item.status}
-            instansi={item.instansi}
-            jabatan={item.jabatan}
-            pasal={item.pasal}
-            tahun={item.tahun}
-            kerugian={item.total_kerugian}
-            judul={item.judul}
-            sumber={item.sumber}
-            link={item.source_url}
+      {/* CHARTS */}
+      {stats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginBottom: '32px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '16px' }}>
+            <p style={{ color: '#f7f8f8', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Instansi Terbanyak</p>
+            <p style={{ color: '#62666d', fontSize: '11px', marginBottom: '12px' }}>8 instansi dengan jumlah tersangka terbanyak</p>
+            <div ref={chartBar} style={{ minHeight: '250px' }} />
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '16px' }}>
+            <p style={{ color: '#f7f8f8', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Status Hukum</p>
+            <p style={{ color: '#62666d', fontSize: '11px', marginBottom: '12px' }}>Proporsi status dari semua tersangka</p>
+            <div ref={chartPie} style={{ minHeight: '250px' }} />
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '16px' }}>
+            <p style={{ color: '#f7f8f8', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Tren Tahunan</p>
+            <p style={{ color: '#62666d', fontSize: '11px', marginBottom: '12px' }}>Jumlah kasus korupsi per tahun (2013-2025)</p>
+            <div ref={chartLine} style={{ minHeight: '250px' }} />
+          </div>
+        </div>
+      )}
+
+      {/* TOP KERUGIAN */}
+      {topRugi.length > 0 && (
+        <div style={{ background: 'rgba(220,38,38,0.04)', border: '1px solid rgba(220,38,38,0.15)', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
+          <p style={{ color: '#dc2626', fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>⚠️ 5 Kerugian Negara Terbesar</p>
+          <div style={{ display: 'grid', gap: '6px' }}>
+            {topRugi.map((t: any, i: number) => (
+              <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ color: '#62666d', fontSize: '12px', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', minWidth: '24px' }}>#{i + 1}</span>
+                  <span style={{ color: '#f7f8f8', fontSize: '14px', fontWeight: 500 }}>{t.nama}</span>
+                </div>
+                <span style={{ color: '#dc2626', fontSize: '14px', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{formatRupiah(t.total_kerugian)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SEARCH + FILTERS */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ flex: '1 1 240px', position: 'relative' }}>
+          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#62666d', fontSize: '14px' }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Cari nama tersangka..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%', padding: '10px 12px 10px 36px', borderRadius: '6px',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#f7f8f8', fontSize: '14px', outline: 'none',
+            }}
           />
-        ))}
+        </div>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {[
+            { key: 'all', label: 'Semua' },
+            { key: 'terpidana', label: '🔴 Terpidana' },
+            { key: 'tersangka', label: '🟡 Tersangka' },
+          ].map(f => (
+            <button key={f.key} onClick={() => setStatusFilter(f.key)}
+              style={{
+                padding: '8px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                fontSize: '13px', fontWeight: 500,
+                background: statusFilter === f.key ? '#dc2626' : 'rgba(255,255,255,0.04)',
+                color: statusFilter === f.key ? '#fff' : '#a0a4ab',
+              }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
+          style={{
+            padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.04)', color: '#a0a4ab', fontSize: '13px', cursor: 'pointer',
+          }}>
+          <option value="nama">Urut: Nama A-Z</option>
+          <option value="kerugian">Urut: Kerugian Terbesar</option>
+          <option value="tahun">Urut: Tahun Terbaru</option>
+        </select>
+        <span style={{ color: '#62666d', fontSize: '13px', marginLeft: 'auto' }}>
+          {filtered.length} tersangka
+        </span>
       </div>
+
+      {/* LEGEND */}
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', fontSize: '12px', color: '#8a8f98' }}>
+        <span><span style={{ color: '#dc2626' }}>●</span> Terpidana — sudah divonis pengadilan</span>
+        <span><span style={{ color: '#f59e0b' }}>●</span> Tersangka — masih proses hukum</span>
+      </div>
+
+      {/* GRID */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#62666d' }}>
+          <p style={{ fontSize: '32px', marginBottom: '8px' }}>🔍</p>
+          <p style={{ fontSize: '16px' }}>Tidak ada tersangka yang cocok dengan pencarian "{search}"</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '10px' }}>
+          {filtered.map((item: any) => (
+            <KoruptorCard key={item.id}
+              nama={item.nama} status={item.status}
+              instansi={item.instansi} jabatan={item.jabatan}
+              pasal={item.pasal} tahun={item.tahun}
+              kerugian={item.total_kerugian}
+              judul={item.judul} sumber={item.sumber} link={item.source_url}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
