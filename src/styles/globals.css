@@ -1,20 +1,13 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
-@theme {
-  --color-surface-900: #0a0a0a;
-  --color-surface-800: #171717;
-  --color-surface-700: #262626;
-  --color-surface-600: #404040;
-  --color-surface-500: #737373;
-  --color-surface-400: #a3a3a3;
-  --color-accent: #dc2626;
-  --font-family-sans: "Inter Tight", sans-serif;
-  --font-family-mono: "JetBrains Mono", monospace;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body {
   background: #0a0a0a;
   color: white;
   font-family: "Inter Tight", sans-serif;
+  selection-background-color: #dc2626; /* Use CSS property directly */
+  selection-color: white;
 }
