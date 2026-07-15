@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react';
 import { KoruptorCard } from '../components/KoruptorCard';
 
-export default function Home() {
-  const [data, setData] = useState([]);
+export async function getServerSideProps() {
+  try {
+    const res = await fetch('https://api-watchlist.lanss.my.id/api/toptersangka');
+    const data = await res.json();
+    return { props: { data } };
+  } catch (e) {
+    console.error('Fetch failed:', e);
+    return { props: { data: [] } };
+  }
+}
 
-  useEffect(() => {
-    // Proxying to Flask port 5000 in dev
-    fetch('http://127.0.0.1:5000/api/toptersangka')
-      .then(res => res.json())
-      .then(setData)
-      .catch(console.error);
-  }, []);
-
+export default function Home({ data }: { data: any[] }) {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-10 font-sans selection:bg-accent selection:text-white">
       <header className="border-b border-surface-800 pb-6 mb-10">
